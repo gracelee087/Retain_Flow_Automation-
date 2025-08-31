@@ -3,7 +3,9 @@ import streamlit as st
 import pickle
 from sqlalchemy import create_engine
 
-# 모델 로드
+# ---------------------------
+# 1. 모델 로드
+# ---------------------------
 with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
     bundle = pickle.load(f)
 
@@ -11,7 +13,14 @@ model = bundle["model"]
 scaler = bundle["scaler"]
 kmeans = bundle["kmeans"]
 
-# 클러스터 라벨 매핑 함수
+# ---------------------------
+# 2. Postgres DB 연결
+# ---------------------------
+engine = create_engine("postgresql://postgres:PqKHbS8fqXKSnyYv@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres")
+
+# ---------------------------
+# 3. 클러스터 라벨링 함수
+# ---------------------------
 def label_cluster(cluster):
     if cluster == 2:
         return "High Risk & High Value"
@@ -24,10 +33,10 @@ def label_cluster(cluster):
     else:
         return "Unknown"
 
-# DB 연결
-engine = create_engine("sqlite:///customers.db")
-
-st.title("고객 이탈 예측 + 세그먼트 데모")
+# ---------------------------
+# 4. Streamlit UI
+# ---------------------------
+st.title("고객 이탈 예측 + 세그먼트 데모 (Supabase 버전)")
 
 uploaded_file = st.file_uploader("고객 CSV 업로드", type="csv")
 
@@ -43,17 +52,64 @@ if uploaded_file:
         "MonthlyCharges": df["MonthlyCharges"]
     })
     df["Cluster"] = kmeans.predict(scaler.transform(cluster_input))
-
-    # 클러스터 해석 라벨
     df["ClusterLabel"] = df["Cluster"].apply(label_cluster)
 
-    # DB 저장
-    df.to_sql("predictions", con=engine, if_exists="append", index=False)
+    # 컬럼명 Supabase 테이블에 맞추기
+    df = df.rename(columns={
+        "customerID": "customer_id",
+        "ClusterLabel": "cluster_label",
+        "Email": "email"
+    })
 
-    st.write("예측 및 세그먼트 결과:")
-    st.dataframe(df[["customerID", "churn_prob", "ClusterLabel"]])
+    # Supabase 저장
+    df[["customer_id", "email", "churn_prob", "cluster_label"]].to_sql(
+        "predictions", con=engine, if_exists="append", index=False
+    )
 
-    st.success("DB 저장 완료 → n8n이 자동 메일 발송합니다.")
+    st.subheader("예측 및 세그먼트 결과")
+    st.dataframe(df[["customer_id", "email", "churn_prob", "cluster_label"]])
+
+    st.success("✅ Supabase DB에 저장 완료!")
+
+
+
+
+
+
+
+    # # 예측 결과 미리보기
+    # st.dataframe(df.head(10))
+
+    # # --------------------------
+    # # 1) 세그먼트 분포 시각화
+    # # --------------------------
+    # import matplotlib.pyplot as plt
+    # st.subheader("세그먼트 분포")
+    # seg_counts = df["ClusterLabel"].value_counts()
+    # fig, ax = plt.subplots()
+    # ax.pie(seg_counts, labels=seg_counts.index, autopct='%1.1f%%')
+    # st.pyplot(fig)
+
+    # # --------------------------
+    # # 2) Top High Risk 고객 미리보기
+    # # --------------------------
+    # st.subheader("Top High Risk 고객")
+    # st.dataframe(df.sort_values("churn_prob", ascending=False).head(5))
+
+    # # --------------------------
+    # # 3) Retention Action 추천
+    # # --------------------------
+    # def recommend_action(label):
+    #     if label == "High Risk & High Value":
+    #         return "VIP 쿠폰 발송"
+    #     elif label == "High Risk & Low Value":
+    #         return "저비용 뉴스레터"
+    #     else:
+    #         return "감사 메일"
+
+    # df["Action"] = df["ClusterLabel"].apply(recommend_action)
+    # st.subheader("고객별 추천 액션")
+    # st.dataframe(df[["customerID", "churn_prob", "ClusterLabel", "Action"]])
 
 
 
