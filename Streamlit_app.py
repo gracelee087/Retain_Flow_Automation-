@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 import pickle
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.dialects.postgresql import insert
 
 # ---------------------------
 # 1. 모델 로드
@@ -43,10 +44,14 @@ uploaded_file = st.file_uploader("고객 CSV 업로드", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # 예측
+    # ---------------------------
+    # (1) 고객 이탈 확률 예측
+    # ---------------------------
     df["churn_prob"] = model.predict_proba(df)[:, 1]
 
-    # 클러스터링
+    # ---------------------------
+    # (2) 클러스터링
+    # ---------------------------
     cluster_input = pd.DataFrame({
         "ChurnProbability": df["churn_prob"],
         "MonthlyCharges": df["MonthlyCharges"]
@@ -54,22 +59,128 @@ if uploaded_file:
     df["Cluster"] = kmeans.predict(scaler.transform(cluster_input))
     df["ClusterLabel"] = df["Cluster"].apply(label_cluster)
 
-    # 컬럼명 Supabase 테이블에 맞추기
+    # ---------------------------
+    # (3) 컬럼명 DB 테이블과 맞추기
+    # ---------------------------
     df = df.rename(columns={
         "customerID": "customer_id",
         "ClusterLabel": "cluster_label",
         "Email": "email"
     })
 
-    # Supabase 저장
-    df[["customer_id", "email", "churn_prob", "cluster_label"]].to_sql(
-        "predictions", con=engine, if_exists="append", index=False
-    )
+    # ---------------------------
+    # (4) Supabase DB 저장 (UPSERT)
+    # ---------------------------
+    from sqlalchemy import Table
 
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+    predictions_table = metadata.tables["predictions"]
+
+    with engine.begin() as conn:
+        for _, row in df.iterrows():
+            stmt = insert(predictions_table).values(
+                customer_id=row["customer_id"],
+                email=row["email"],
+                churn_prob=row["churn_prob"],
+                cluster_label=row["cluster_label"]
+            )
+            # ✅ customer_id가 이미 있으면 → 최신 정보로 업데이트
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["customer_id"],
+                set_={
+                    "email": row["email"],
+                    "churn_prob": row["churn_prob"],
+                    "cluster_label": row["cluster_label"]
+                }
+            )
+            conn.execute(stmt)
+
+    # ---------------------------
+    # (5) Streamlit 출력
+    # ---------------------------
     st.subheader("예측 및 세그먼트 결과")
     st.dataframe(df[["customer_id", "email", "churn_prob", "cluster_label"]])
 
-    st.success("✅ Supabase DB에 저장 완료!")
+    st.success("✅ Supabase DB에 최신 정보 저장 완료! (중복 고객은 업데이트됨)")
+
+
+
+
+
+
+# import pandas as pd
+# import streamlit as st
+# import pickle
+# from sqlalchemy import create_engine
+
+# # ---------------------------
+# # 1. 모델 로드
+# # ---------------------------
+# with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
+#     bundle = pickle.load(f)
+
+# model = bundle["model"]
+# scaler = bundle["scaler"]
+# kmeans = bundle["kmeans"]
+
+# # ---------------------------
+# # 2. Postgres DB 연결
+# # ---------------------------
+# engine = create_engine("postgresql://postgres:PqKHbS8fqXKSnyYv@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres")
+
+# # ---------------------------
+# # 3. 클러스터 라벨링 함수
+# # ---------------------------
+# def label_cluster(cluster):
+#     if cluster == 2:
+#         return "High Risk & High Value"
+#     elif cluster == 0:
+#         return "Low Risk & High Value"
+#     elif cluster == 1:
+#         return "Low Risk & Low Value"
+#     elif cluster == 3:
+#         return "Low Risk & Mid Value"
+#     else:
+#         return "Unknown"
+
+# # ---------------------------
+# # 4. Streamlit UI
+# # ---------------------------
+# st.title("고객 이탈 예측 + 세그먼트 데모 (Supabase 버전)")
+
+# uploaded_file = st.file_uploader("고객 CSV 업로드", type="csv")
+
+# if uploaded_file:
+#     df = pd.read_csv(uploaded_file)
+
+#     # 예측
+#     df["churn_prob"] = model.predict_proba(df)[:, 1]
+
+#     # 클러스터링
+#     cluster_input = pd.DataFrame({
+#         "ChurnProbability": df["churn_prob"],
+#         "MonthlyCharges": df["MonthlyCharges"]
+#     })
+#     df["Cluster"] = kmeans.predict(scaler.transform(cluster_input))
+#     df["ClusterLabel"] = df["Cluster"].apply(label_cluster)
+
+#     # 컬럼명 Supabase 테이블에 맞추기
+#     df = df.rename(columns={
+#         "customerID": "customer_id",
+#         "ClusterLabel": "cluster_label",
+#         "Email": "email"
+#     })
+
+#     # Supabase 저장
+#     df[["customer_id", "email", "churn_prob", "cluster_label"]].to_sql(
+#         "predictions", con=engine, if_exists="append", index=False
+#     )
+
+#     st.subheader("예측 및 세그먼트 결과")
+#     st.dataframe(df[["customer_id", "email", "churn_prob", "cluster_label"]])
+
+#     st.success("✅ Supabase DB에 저장 완료!")
 
 
 
