@@ -26,7 +26,7 @@ residual_model = revenue_bundle["residual_model"]
 # 2. Postgres DB 연결
 # ---------------------------
 engine = create_engine(
-    "postgresql://postgres:PqKHbS8fqXKSnyYv@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
+    "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
 )
 
 # ---------------------------
