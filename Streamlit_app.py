@@ -39,7 +39,6 @@ with tab2:
 
 
 
-
 with tab3:
     st.header("Modeling/Evaluation - 모델 결과 확인")
     st.write("샘플 예측 결과, 피처 중요도 등")
@@ -62,6 +61,30 @@ with tab3:
             st.warning("⚠️ 모델 성능 이미지 파일이 없습니다.")
     else:
         st.error("❌ 모델링 결과 경로를 찾을 수 없습니다. 경로를 다시 확인해주세요.")
+
+    # ---------------------------
+    # Churn 모델과 Revenue 모델 구분선
+    # ---------------------------
+    st.divider()  # 최신 Streamlit
+    # st.markdown("---")  # 혹은 이 방식도 가능
+
+    st.header("💰 Revenue 모델 성능 시각화")
+
+    revenue_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\revenue_insight"
+
+    if os.path.exists(revenue_path):
+        img_files = [f for f in os.listdir(revenue_path) if f.endswith(".png")]
+        if img_files:
+            for img in sorted(img_files):
+                st.image(
+                    os.path.join(revenue_path, img),
+                    caption=img,
+                    width=800
+                )
+        else:
+            st.warning("⚠️ Revenue 모델 시각화 이미지가 없습니다.")
+    else:
+        st.error("❌ Revenue 결과 경로를 찾을 수 없습니다. 경로를 다시 확인해주세요.")
 
 
 
