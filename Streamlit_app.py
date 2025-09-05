@@ -43,6 +43,28 @@ with tab2:
 with tab3:
     st.header("Modeling/Evaluation - 모델 결과 확인")
     st.write("샘플 예측 결과, 피처 중요도 등")
+    
+    st.header("🧪 모델 성능 확인")
+
+    modeling_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\modeling_insight"
+
+    if os.path.exists(modeling_path):
+        img_files = [f for f in os.listdir(modeling_path) if f.endswith((".png", ".jpg", ".jpeg"))]
+
+        if img_files:
+            for img in sorted(img_files):  # 정렬해서 순서대로 보여주기
+                st.image(
+                    os.path.join(modeling_path, img),
+                    caption=img,
+                    width=800 # ✅ 원하는 크기 (px 단위)
+                )
+        else:
+            st.warning("⚠️ 모델 성능 이미지 파일이 없습니다.")
+    else:
+        st.error("❌ 모델링 결과 경로를 찾을 수 없습니다. 경로를 다시 확인해주세요.")
+
+
+
 
 
 
