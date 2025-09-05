@@ -1,136 +1,127 @@
-import streamlit as st
 import pandas as pd
-import numpy as np
+import streamlit as st
 import pickle
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.dialects.postgresql import insert
-from sklearn.preprocessing import StandardScaler
-import plotly.express as px
+import numpy as np
+import streamlit as st
+import os
 
-# ---------------------------
-# 1. 모델 로드 (앱 시작 시 1회 실행)
-# ---------------------------
-with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
-    bundle = pickle.load(f)
-model = bundle["model"]
-scaler = bundle["scaler"]
-kmeans = bundle["kmeans"]
 
-with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
-    revenue_model = pickle.load(f)
+# 탭 생성
+tab1, tab2, tab3, tab4, tab5= st.tabs(["Problem", "EDA", "Modeling/Evaluation", "Application", "Outcome"])
 
-# DB 연결
-engine = create_engine(
-    "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
-)
 
-# 클러스터 라벨링 함수
-def label_cluster(cluster):
-    if cluster == 2:
-        return "High Risk & High Value"
-    elif cluster == 0:
-        return "Low Risk & High Value"
-    elif cluster == 1:
-        return "Low Risk & Low Value"
-    elif cluster == 3:
-        return "Low Risk & Mid Value"
+
+with tab1:
+    st.header("Problem - 기본 정보")
+    st.write("여기에 다른 기능을 넣을 수 있어요")
+
+with tab2:
+    st.header("EDA - 탐색적 데이터 분석 결과")
+
+    eda_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\eda_insight"
+
+    if os.path.exists(eda_path):
+        img_files = [f for f in os.listdir(eda_path) if f.endswith((".png", ".jpg", ".jpeg"))]
+
+        if img_files:
+            for img in img_files:
+                st.image(
+                    os.path.join(eda_path, img),
+                    caption=img,
+                    use_container_width=True  # ✅ 변경됨
+                )
+        else:
+            st.warning("⚠️ EDA 이미지 파일이 없습니다.")
     else:
-        return "Unknown"
+        st.error("❌ EDA 경로를 찾을 수 없습니다. 경로를 다시 확인해주세요.")
 
-base_messages = {
-    "High Risk & High Value": "프리미엄 고객 전용 혜택 안내",
-    "Low Risk & High Value": "VIP 고객님께 드리는 감사 인사",
-    "Low Risk & Low Value": "고객님의 소중한 의견을 듣고 싶습니다",
-    "Low Risk & Mid Value": "편안한 서비스 이용을 위한 맞춤 제안",
-    "Unknown": "기본 안내 메시지"
-}
 
-# ---------------------------
-# 2. 발표용 탭 구조
-# ---------------------------
-st.title("📊 고객 이탈 & 매출 예측 프로젝트 - 발표")
 
-tabs = st.tabs(["문제제기", "EDA", "ML 모델링", "비즈니스 적용", "결론 및 향후 과제"])
 
-# ---------------------------
-# 3. 문제제기
-# ---------------------------
-with tabs[0]:
-    st.header("문제제기")
-    st.write("통신사 고객 이탈률이 높아지고 있습니다. 이탈은 곧 매출 손실로 이어집니다.")
+with tab3:
+    st.header("Modeling/Evaluation - 모델 결과 확인")
+    st.write("샘플 예측 결과, 피처 중요도 등")
 
-    labels = ["유지 고객", "이탈 고객"]
-    sizes = [0.73, 0.27]  # 예시 비율
-    fig, ax = plt.subplots()
-    ax.pie(sizes, labels=labels, autopct='%1.1f%%')
-    st.pyplot(fig)
 
-# ---------------------------
-# 4. EDA
-# ---------------------------
-with tabs[1]:
-    st.header("EDA (탐색적 데이터 분석)")
-    df = pd.read_csv("customer_Info copy.csv")
 
-    st.subheader("Tenure 분포")
-    fig, ax = plt.subplots()
-    sns.histplot(df["tenure"], bins=30, ax=ax)
-    st.pyplot(fig)
 
-    st.subheader("Contract 유형별 이탈률")
-    churn_rate = df.groupby("Contract")["Churn"].apply(lambda x: (x == "Yes").mean())
-    st.bar_chart(churn_rate)
+with tab4:
+    st.header("Application - 고객 이탈 + 매출 예측 (Supabase 연동)")
 
-# ---------------------------
-# 5. ML 모델링
-# ---------------------------
-with tabs[2]:
-    st.header("ML 모델링")
+    # ---------------------------
+    # 1. 모델 로드
+    # ---------------------------
+    with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
+        bundle = pickle.load(f)
 
-    col1, col2 = st.columns(2)
+    model = bundle["model"]
+    scaler = bundle["scaler"]
+    kmeans = bundle["kmeans"]
 
-    with col1:
-        st.subheader("이탈율 모델 성능")
-        st.image("confusion_matrix.png")  # 사전 저장된 이미지
-        st.metric("Recall", "0.82")
-        st.metric("ROC-AUC", "0.87")
+    with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
+        revenue_bundle = pickle.load(f)
 
-    with col2:
-        st.subheader("Revenue 모델 성능")
-        st.image("feature_importance.png")  # 사전 저장된 이미지
-        st.metric("R²", "0.76")
-        st.metric("RMSE", "115.3")
+    base_model = revenue_bundle["baseline_model"]
+    residual_model = revenue_bundle["residual_model"]
 
-# ---------------------------
-# 6. 비즈니스 적용
-# ---------------------------
-with tabs[3]:
-    st.header("비즈니스 적용")
+    # ---------------------------
+    # 2. Postgres DB 연결
+    # ---------------------------
+    engine = create_engine(
+        "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
+    )
+
+    # ---------------------------
+    # 3. 세그먼트 라벨링 함수 & base_message 매핑
+    # ---------------------------
+    def label_cluster(cluster):
+        if cluster == 2:
+            return "High Risk & High Value"
+        elif cluster == 0:
+            return "Low Risk & High Value"
+        elif cluster == 1:
+            return "Low Risk & Low Value"
+        elif cluster == 3:
+            return "Low Risk & Mid Value"
+        else:
+            return "Unknown"
+
+    base_messages = {
+        "High Risk & High Value": "프리미엄 고객 전용 혜택 안내",
+        "Low Risk & High Value": "VIP 고객님께 드리는 감사 인사",
+        "Low Risk & Low Value": "고객님의 소중한 의견을 듣고 싶습니다",
+        "Low Risk & Mid Value": "편안한 서비스 이용을 위한 맞춤 제안",
+        "Unknown": "기본 안내 메시지"
+    }
+
+
+    # ---------------------------
+    # 4. Streamlit UI
+    # ---------------------------
+    st.title("📊 고객 이탈 + 매출 예측 (Supabase 연동)")
 
     uploaded_file = st.file_uploader("고객 CSV 업로드", type="csv")
 
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
 
-        # (1) 이탈 확률 예측
+        # (1) 고객 이탈 확률 예측
         df["churn_prob"] = model.predict_proba(df)[:, 1]
 
-        # (2) 매출 예측
-        revenue_features = [
-            "tenure", "MonthlyCharges", "SeniorCitizen",
-            "Contract", "PaymentMethod", "InternetService", "OnlineSecurity",
-            "OnlineBackup", "DeviceProtection", "TechSupport",
-            "StreamingTV", "StreamingMovies", "PaperlessBilling",
-            "Partner", "Dependents"
-        ]
-        X_revenue = df[revenue_features]
-        df["predicted_revenue"] = np.clip(revenue_model.predict(X_revenue), a_min=0, a_max=None)
+        # (2) 매출 예측 (Baseline + Residual)
+        X_base = df[["tenure", "MonthlyCharges"]]
+        X_res = df[["PaymentMethod", "PaperlessBilling", "Dependents",
+                    "OnlineBackup", "InternetService", "StreamingTV", "OnlineSecurity"]]
 
-        # (3) Expected Loss (12M)
+        baseline_pred = base_model.predict(X_base)
+        residual_pred = residual_model.predict(X_res)
+        df["predicted_revenue"] = np.clip(baseline_pred + residual_pred, a_min=0, a_max=None)
+
+        # (3) 📌 12개월 기준 지표
         df["revenue_12m"] = df["MonthlyCharges"] * 12
-        df["expected_loss"] = df["revenue_12m"] * df["churn_prob"]
+        df["expected_loss_12m"] = df["revenue_12m"] * df["churn_prob"]
 
         # (4) 클러스터링
         cluster_input = pd.DataFrame({
@@ -140,10 +131,18 @@ with tabs[3]:
         df["Cluster"] = kmeans.predict(scaler.transform(cluster_input))
         df["cluster_label"] = df["Cluster"].apply(label_cluster)
 
-        # (5) base_message
+        # (5) base_message 생성
         df["base_message"] = df["cluster_label"].map(base_messages)
 
-        # (6) DB 저장
+        # (6) 컬럼명 DB 테이블과 맞추기
+        df = df.rename(columns={
+            "customerID": "customer_id",
+            "Email": "email"
+        })
+
+        # ---------------------------
+        # 7. Supabase DB 저장 (전체 고객 → predictions 테이블)
+        # ---------------------------
         metadata = MetaData()
         metadata.reflect(bind=engine)
         predictions_table = metadata.tables["predictions"]
@@ -151,63 +150,89 @@ with tabs[3]:
         with engine.begin() as conn:
             for _, row in df.iterrows():
                 stmt = insert(predictions_table).values(
-                    customer_id=row.get("customerID"),
-                    email=row.get("Email"),
+                    customer_id=row["customer_id"],
+                    email=row["email"],
                     churn_prob=row["churn_prob"],
                     cluster_label=row["cluster_label"],
                     base_message=row["base_message"],
                     predicted_revenue=row["predicted_revenue"],
-                    expected_loss=row["expected_loss"],
-                    revenue_12m=row["revenue_12m"]
+                    revenue_12m=row["revenue_12m"],
+                    expected_loss_12m=row["expected_loss_12m"]
                 )
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["customer_id"],
                     set_={
-                        "email": row.get("Email"),
+                        "email": row["email"],
                         "churn_prob": row["churn_prob"],
                         "cluster_label": row["cluster_label"],
                         "base_message": row["base_message"],
                         "predicted_revenue": row["predicted_revenue"],
-                        "expected_loss": row["expected_loss"],
-                        "revenue_12m": row["revenue_12m"]
+                        "revenue_12m": row["revenue_12m"],
+                        "expected_loss_12m": row["expected_loss_12m"]
                     }
                 )
                 conn.execute(stmt)
 
-        # (7) 발표용 출력
+        # ---------------------------
+        # 8. Top 10 고객 저장 (→ top_risk_customers 테이블)
+        # ---------------------------
+        top10 = df.sort_values("expected_loss_12m", ascending=False).head(10)
+
+        top_table = metadata.tables["top_risk_customers"]
+
+        with engine.begin() as conn:
+            # 기존 데이터 지우고 새로 저장 (덮어쓰기 방식)
+            conn.execute(text("TRUNCATE TABLE top_risk_customers;"))
+
+            for _, row in top10.iterrows():
+                stmt = insert(top_table).values(
+                    customer_id=row["customer_id"],
+                    email=row["email"],
+                    churn_prob=row["churn_prob"],
+                    cluster_label=row["cluster_label"],
+                    base_message=row["base_message"],
+                    predicted_revenue=row["predicted_revenue"],
+                    revenue_12m=row["revenue_12m"],
+                    expected_loss_12m=row["expected_loss_12m"]
+                )
+                conn.execute(stmt)
+
+        # ---------------------------
+        # 9. Streamlit 출력
+        # ---------------------------
         st.subheader("예측 및 세그먼트 결과")
-        st.dataframe(df[[
-            "customerID", "Email", "churn_prob",
-            "cluster_label", "base_message",
-            "predicted_revenue", "expected_loss", "revenue_12m"
-        ]])
+        st.dataframe(df[["customer_id", "email", "churn_prob",
+                        "cluster_label", "base_message",
+                        "predicted_revenue",
+                        "revenue_12m", "expected_loss_12m"]])
 
         st.subheader("Top 10 Revenue at Risk 고객 (12M 기준)")
-        st.dataframe(df.sort_values("expected_loss", ascending=False).head(10))
+        st.dataframe(top10)
 
-        # (8) 클러스터링 시각화
-        st.subheader("고객 세그먼트 시각화")
-        fig = px.scatter(
-            df,
-            x="MonthlyCharges", y="churn_prob",
-            color="cluster_label",
-            hover_data=["customerID", "predicted_revenue", "expected_loss"],
-            title="Risk vs Value 세그먼트"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        st.success("✅ Supabase DB 업데이트 완료! (전체 predictions + Top 10 저장)")
 
-        st.success("✅ Supabase DB에 최신 정보 저장 완료! (중복 고객은 업데이트됨)")
 
-# ---------------------------
-# 7. 결론 및 향후 과제
-# ---------------------------
-with tabs[4]:
-    st.header("결론 및 향후 과제")
-    st.success("이탈율 모델 + Revenue 모델을 활용해 고객 유지 전략 수립 가능")
 
-    st.markdown("""
-    **향후 과제**
-    - Survival Analysis로 LTV 정밀화  
-    - 실시간 데이터 파이프라인 구축  
-    - 캠페인 자동화 (혜택 제공)  
-    """)
+
+with tab5:
+    st.header("Outcome - 결론(+product) 및 향후 과제")
+    st.write("여기에 다른 기능을 넣을 수 있어요")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
