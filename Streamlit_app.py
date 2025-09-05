@@ -7,6 +7,8 @@ import numpy as np
 import streamlit as st
 import os
 
+st.title("RetainFlow Automation: Customer Churn Prediction")
+
 
 # 탭 생성
 tab1, tab2, tab3, tab4, tab5= st.tabs(["Problem", "EDA", "Modeling/Evaluation", "Application", "Outcome"])
@@ -15,12 +17,25 @@ tab1, tab2, tab3, tab4, tab5= st.tabs(["Problem", "EDA", "Modeling/Evaluation", 
 
 with tab1:
 
+    # Objective
+    st.header("Objective")
+    st.markdown("""
+    - Identify churn-prone customers using historical telco data  
+    - Automate retention workflows by connecting predictions to **make.com**  
+    - Enable timely customer engagement (e.g., sending offers, alerts to CRM, or triggering support tickets)  
+    """)
+
+
     st.header("Business Problem")
     st.markdown("""
-- Telecom customers can easily switch → churn directly reduces revenue.  
-- Even a **5% reduction in churn = +25–95% profit** (Bain & Co.).  
-- CAC (new customers) is **5x more costly** than CRC (retaining) (HBR).  
-- **Key challenge**: How well churn is predicted & marketing targeted = revenue growth.  
+    - Telecom customers can easily switch, so **churn directly reduces revenue**.  
+    - Even a small improvement matters: a **5% reduction in churn can boost profits by 25–95%** (Bain & Co.).  
+    - **Customer Acquisition Cost (CAC)** is about **5x higher** than **Customer Retention Cost (CRC)** (HBR).  
+    - Despite this, many churn analyses stop at *prediction*, without seamless integration into **real business workflows**.  
+    - Marketing and support teams often lack **real-time triggers** to act on churn insights.  
+    - Without automation, valuable time is lost between churn detection and customer outreach.  
+    - **Key challenge**: How well churn is predicted **and** how effectively marketing actions are automated determines revenue growth.  
+    - This project bridges the gap by combining **machine learning models** with **make.com automation**, enabling organizations to not only *predict churn* but also to **automatically take retention actions**.  
     """)
 
 
@@ -39,7 +54,7 @@ This opportunity map helps us **prioritize projects**:
 
     st.header("Why It Matters")
     st.markdown("""
-- **Cost efficiency**: Retaining is cheaper & more profitable (HBR).  
+- **Cost efficiency**: Retaining is cheaper & more profitable.  
 - **Customer lifetime value**: Identify & prioritize high-value churn-risk customers.  
 - **Personalized marketing**: Segmentation + churn probability → tailored offers.  
 - **Revenue impact**: Proactive churn management drives growth.  
