@@ -14,11 +14,129 @@ tab1, tab2, tab3, tab4, tab5= st.tabs(["Problem", "EDA", "Modeling/Evaluation", 
 
 
 with tab1:
-    st.header("Problem - 기본 정보")
-    st.write("여기에 다른 기능을 넣을 수 있어요")
+
+    st.header("Business Problem")
+    st.markdown("""
+- Telecom customers can easily switch → churn directly reduces revenue.  
+- Even a **5% reduction in churn = +25–95% profit** (Bain & Co.).  
+- CAC (new customers) is **5x more costly** than CRC (retaining) (HBR).  
+- **Key challenge**: How well churn is predicted & marketing targeted = revenue growth.  
+    """)
+
+
+
+    st.header("Telco Opportunity Map")
+    st.image("pic.png", caption="Opportunity Map: Balancing Effort vs. Benefit", width=700)
+
+    st.markdown("""
+This opportunity map helps us **prioritize projects**:  
+- **Top-left (Quick Wins)**: High benefit, low effort → e.g., Churn AI + Discounts, Loyalty programs.  
+- **Bottom-right (Long-term Bets)**: High effort, uncertain benefit → e.g., IoT, 5G marketing.  
+- Our focus starts with **Churn AI**, where benefit is high and execution is feasible.  
+    """)
+
+
+
+    st.header("Why It Matters")
+    st.markdown("""
+- **Cost efficiency**: Retaining is cheaper & more profitable (HBR).  
+- **Customer lifetime value**: Identify & prioritize high-value churn-risk customers.  
+- **Personalized marketing**: Segmentation + churn probability → tailored offers.  
+- **Revenue impact**: Proactive churn management drives growth.  
+- **Strategic decisions**: Data-driven CRM, bundles, loyalty programs.  
+    """)
+
+
+
+
+    # 참고문헌 (작게 표시)
+    st.markdown(
+        """
+        <sub>**References**:  
+        Bain & Company, *Customer Retention Economics*  
+        Harvard Business Review (2014), *The Value of Keeping the Right Customers*</sub>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 with tab2:
-    st.header("EDA - 탐색적 데이터 분석 결과")
+
+
+    
+    st.header("Exploratory Data Analysis Results")
+
+
+
+
+    st.markdown("""
+                
+
+    ### Data source / collection / challenges
+
+    **Data source**  
+    - Telco Customer Churn dataset (Kaggle / IBM Sample Data)  
+    - Includes customer contracts, payment methods, service usage, billing history, and churn labels  
+
+    **Data collection**  
+    - Mainly gathered from **Customer Relationship Management (CRM)** and **Billing systems**  
+    - Key feature categories:  
+    - **Customer info**: tenure, SeniorCitizen  
+    - **Contract info**: Contract, PaymentMethod, InternetService  
+    - **Service usage**: TechSupport, OnlineSecurity, StreamingTV  
+    - **Billing data**: MonthlyCharges, TotalCharges  
+    - Churn is defined as whether a customer discontinued the service within a given period  
+
+    **Challenges**  
+    - **Data quality issues**: missing or invalid `TotalCharges` values → preprocessing required  
+    - **Class imbalance**: majority of customers are `Churn=No`, while `Churn=Yes` is a minority → risk of biased models  
+    - **Categorical features**: contract, payment method, and service usage require encoding for ML models  
+    - **Limitations in realism**:  
+    - Lacks behavioral data such as complaints, service quality issues, or customer interactions  
+    - No information on customer re-subscription after churn or the impact of specific marketing campaigns  
+    - Therefore, assessing marketing effectiveness and retention strategies is challenging with this dataset
+
+    ---
+
+                
+    ### Key Insights from EDA
+
+    **Customer Tenure**  
+    - Customers with shorter tenure show a higher churn rate  
+    - Long-term customers tend to have higher TotalCharges and lower churn probability  
+
+    **Billing Metrics**  
+    - Higher MonthlyCharges are associated with higher churn  
+    - In contrast, TotalCharges show a negative correlation with churn, reflecting stronger customer loyalty  
+
+    **Contract & Service Features**  
+    - Month-to-month contracts have the highest churn rate  
+    - Customers paying via **Electronic check** are more likely to churn  
+    - Customers without **TechSupport / OnlineSecurity** services show significantly higher churn  
+
+    """)
+
+
+
+
+
+
+
+
+
+
 
     eda_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\eda_insight"
 
@@ -40,10 +158,89 @@ with tab2:
 
 
 with tab3:
-    st.header("Modeling/Evaluation - 모델 결과 확인")
-    st.write("샘플 예측 결과, 피처 중요도 등")
+
+
+
+
+    st.header("Churn Methodology and Technology Stack Used")
+
+    methodology_data = [
+        ["Problem Definition", 
+         "Predict customer churn in advance and identify high-value customers → design targeted retention strategies"],
+        ["Data Preparation", 
+         "- Source: customer_Info copy.csv\n- Convert TotalCharges to numeric & handle missing values\n- Transform Churn: Yes/No → 1/0"],
+        ["Preprocessing Strategy", 
+         "- Numerical: tenure, MonthlyCharges, TotalCharges\n- Categorical: Contract type, Payment method, etc. → OneHotEncoding\n- Numeric cleaning with FunctionTransformer"],
+        ["Imbalance Handling", 
+         "SMOTE: oversampling of minority class (churned customers)"],
+        ["Process", 
+         "Model training → Hyperparameter tuning → Probability calibration → Customer segmentation"],
+        ["Technology Stack", 
+         "- Python (pandas, numpy, scikit-learn, imbalanced-learn, seaborn, matplotlib)\n"
+         "- Modeling: Pipeline, OneHotEncoder, ColumnTransformer, FunctionTransformer\n"
+         "- Model: RandomForestClassifier + CalibratedClassifierCV\n"
+         "- Optimization: GridSearchCV + StratifiedKFold (scoring=recall)\n"
+         "- Imbalance: SMOTE\n"
+         "- Clustering: KMeans + StandardScaler\n"
+         "- Deployment: cloudpickle (model + scaler + clusterer bundle)"]
+    ]
+    methodology_df = pd.DataFrame(methodology_data, columns=["Section", "Details"])
+    st.table(methodology_df)   # ✅ 자동 줄바꿈 표
+
+    st.header("Modelling")
+
+    modelling_data = [
+        ["Base Model", "RandomForestClassifier (class_weight='balanced')"],
+        ["Hyperparameter Tuning", 
+         "GridSearchCV (n_estimators, max_depth, min_samples_split, max_features)\n"
+         "5-Fold Stratified CV, optimized for Recall"],
+        ["Why Recall", 
+         "Missing churners is more costly for the business than false positives"],
+        ["Performance Improvements", 
+         "- CalibratedClassifierCV: probability calibration (sigmoid)\n"
+         "- Threshold adjustment: 0.5 vs 0.3 → improves Recall\n"
+         "- ROC Curve: AUC ≈ 0.85"],
+        ["Feature Importance", 
+         "- Top features: MonthlyCharges, tenure, Contract, InternetService, OnlineSecurity …\n"
+         "- Insights:\n"
+         "  • High MonthlyCharges + short tenure → higher churn risk\n"
+         "  • Missing add-ons (TechSupport, OnlineSecurity) → higher churn risk"],
+        ["Segmentation (KMeans)", 
+         "- Input: Predicted churn probability + MonthlyCharges\n"
+         "- Result: 4 clusters\n"
+         "  • Cluster 2: High Risk & High Value (priority customers)\n"
+         "  • Cluster 0/1: Low Risk groups\n"
+         "- Use case: targeted marketing strategies per segment"]
+    ]
+    modelling_df = pd.DataFrame(modelling_data, columns=["Section", "Details"])
+    st.table(modelling_df)   # ✅ 자동 줄바꿈 표
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    st.header("Modeling/Evaluation")
     
-    st.header("🧪 모델 성능 확인")
+    st.header("Churn Prediction Model Performance Evaluation")
 
     modeling_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\modeling_insight"
 
@@ -62,13 +259,73 @@ with tab3:
     else:
         st.error("❌ 모델링 결과 경로를 찾을 수 없습니다. 경로를 다시 확인해주세요.")
 
+
+
+
+
+
+
+
+
+
+
+
     # ---------------------------
     # Churn 모델과 Revenue 모델 구분선
     # ---------------------------
+    st.header("Revenue Model - Methodology and Technology Stack Used")
+
+    revenue_methodology_data = [
+        ["Problem Definition", 
+         "Predict customer lifetime revenue (TotalCharges) more accurately by combining baseline trends with advanced modeling"],
+        ["Data Preparation", 
+         "- Source: customer_Info copy.csv\n- Drop customerID\n- Convert TotalCharges to numeric & fill missing values"],
+        ["Preprocessing Strategy", 
+         "- Baseline: tenure, MonthlyCharges → Linear Regression\n- Residual: categorical features (Contract, PaymentMethod, InternetService, add-ons like TechSupport, OnlineSecurity) → OneHotEncoding"],
+        ["Residual Concept", 
+         "Residual = Actual TotalCharges – Baseline prediction\nRandomForestRegressor predicts these residuals"],
+        ["Process", 
+         "1. Baseline model (Linear Regression)\n2. Compute residuals\n3. Train RandomForestRegressor on residuals\n4. Final prediction = Baseline + Residual model"],
+        ["Technology Stack", 
+         "- Python (pandas, numpy, scikit-learn, seaborn, matplotlib)\n"
+         "- Models: LinearRegression + RandomForestRegressor\n"
+         "- Pipeline + ColumnTransformer + OneHotEncoder\n"
+         "- Metrics: R², RMSE\n"
+         "- Visualization: scatter plots, residual histograms, feature importances"]
+    ]
+    revenue_methodology_df = pd.DataFrame(revenue_methodology_data, columns=["Section", "Details"])
+    st.table(revenue_methodology_df)
+
+    st.header("Revenue Model - Modelling")
+
+    revenue_modelling_data = [
+        ["Baseline Model", "Linear Regression with tenure × MonthlyCharges"],
+        ["Baseline Performance", "R² ≈ 0.89 → explains ~89% of revenue variance"],
+        ["Residual Modeling", "RandomForestRegressor trained on categorical features (Contract, PaymentMethod, TechSupport, etc.)"],
+        ["Residual Performance", "R² ≈ 0.55 → explains ~55% of variance in residuals"],
+        ["Final Model", "Final prediction = Baseline + Residual model"],
+        ["Final Performance", "R² ≈ 0.965, RMSE ≈ 424\nAverage revenue ≈ 2280 → error ≈ 18.6%"],
+        ["Feature Importance (Residual Model)", "Key drivers: Contract type, InternetService, PaymentMethod, TechSupport, OnlineSecurity"],
+        ["Visualization", "- Baseline vs Actual (scatter)\n- Residual distribution (histogram)\n- Residual Feature Importances (barplot)\n- Final Actual vs Predicted (scatter)\n- Final Residuals (histogram)"]
+    ]
+    revenue_modelling_df = pd.DataFrame(revenue_modelling_data, columns=["Section", "Details"])
+    st.table(revenue_modelling_df)
+
+
+
+
+
+
+
+
+
+
+
+
     st.divider()  # 최신 Streamlit
     # st.markdown("---")  # 혹은 이 방식도 가능
 
-    st.header("💰 Revenue 모델 성능 시각화")
+    st.header("Revenue Prediction Model Performance Evaluation")
 
     revenue_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\revenue_insight"
 
@@ -93,7 +350,7 @@ with tab3:
 
 
 with tab4:
-    st.header("Application - 고객 이탈 + 매출 예측 (Supabase 연동)")
+    st.header("Customer Churn + Revenue Forecasting (Supabase Integration)")
 
     # ---------------------------
     # 1. 모델 로드
@@ -145,9 +402,8 @@ with tab4:
     # ---------------------------
     # 4. Streamlit UI
     # ---------------------------
-    st.title("📊 고객 이탈 + 매출 예측 (Supabase 연동)")
 
-    uploaded_file = st.file_uploader("고객 CSV 업로드", type="csv")
+    uploaded_file = st.file_uploader("Customer CSV upload", type="csv")
 
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
@@ -260,10 +516,33 @@ with tab4:
 
 
 with tab5:
-    st.header("Outcome - 결론(+product) 및 향후 과제")
-    st.write("여기에 다른 기능을 넣을 수 있어요")
 
+    st.header("Next Steps & Open Challenges")
 
+    st.markdown("""
+- **Data expansion**: Include call center logs, customer support chats, and usage data.  
+- **Real-time integration**: Connect models directly with CRM for live churn alerts.  
+- **A/B testing**: Validate the effectiveness of personalized retention campaigns.  
+- **Churn model optimization**: Explore XGBoost/LightGBM, better calibration, and automated threshold tuning.  
+- **Model robustness**: How well does the model generalize across new customer cohorts?  
+- **Ethics & fairness**: Could targeting strategies unintentionally bias or exclude groups?  
+    """)
+
+    st.divider()
+
+    st.header("Long-term Vision")
+    st.markdown("""
+- Build **automation pipelines** with high-performing models beyond churn/revenue.  
+- Enable **1 person to deliver the productivity of 10** through intelligent automation.  
+- Move toward a future where **data-driven decision-making** is seamlessly embedded in daily operations.  
+    """)
+
+    st.markdown(
+        """
+        <sub>Note: This project is a first step toward scaling intelligent automation across business functions.</sub>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 
