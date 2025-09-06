@@ -390,34 +390,10 @@ with tab4:
         "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
     )
 
-    # ---------------------------
-    # 3. 세그먼트 라벨링 함수 & base_message 매핑
-    # ---------------------------
-    def label_cluster(cluster):
-        if cluster == 2:
-            return "High Risk & High Value"
-        elif cluster == 0:
-            return "Low Risk & High Value"
-        elif cluster == 1:
-            return "Low Risk & Low Value"
-        elif cluster == 3:
-            return "Low Risk & Mid Value"
-        else:
-            return "Unknown"
-
-    base_messages = {
-        "High Risk & High Value": "프리미엄 고객 전용 혜택 안내",
-        "Low Risk & High Value": "VIP 고객님께 드리는 감사 인사",
-        "Low Risk & Low Value": "고객님의 소중한 의견을 듣고 싶습니다",
-        "Low Risk & Mid Value": "편안한 서비스 이용을 위한 맞춤 제안",
-        "Unknown": "기본 안내 메시지"
-    }
-
 
     # ---------------------------
     # 4. Streamlit UI
     # ---------------------------
-
     uploaded_file = st.file_uploader("Customer CSV upload", type="csv")
 
     if uploaded_file:
@@ -445,16 +421,36 @@ with tab4:
             "MonthlyCharges": df["MonthlyCharges"]
         })
         df["Cluster"] = kmeans.predict(scaler.transform(cluster_input))
-        df["cluster_label"] = df["Cluster"].apply(label_cluster)
+
+        # 📊 클러스터별 평균으로 Risk/Value 자동 라벨링
+        cluster_summary = df.groupby("Cluster")[["churn_prob", "MonthlyCharges"]].mean()
+        risk_threshold = df["churn_prob"].mean()
+        value_threshold = df["MonthlyCharges"].mean()
+
+        def auto_label(cluster):
+            row = cluster_summary.loc[cluster]
+            risk = "High Risk" if row["churn_prob"] >= risk_threshold else "Low Risk"
+            value = "High Value" if row["MonthlyCharges"] >= value_threshold else "Low Value"
+            return f"{risk} & {value}"
+
+        df["cluster_label"] = df["Cluster"].apply(auto_label)
 
         # (5) base_message 생성
+        base_messages = {
+            "High Risk & High Value": "Exclusive premium offers to retain our top customers",
+            "High Risk & Low Value": "Special discount to prevent churn at minimal cost",
+            "Low Risk & High Value": "VIP thank-you campaign for loyal high-value customers",
+            "Low Risk & Low Value": "Customer feedback request to strengthen relationships",
+        }
         df["base_message"] = df["cluster_label"].map(base_messages)
+
 
         # (6) 컬럼명 DB 테이블과 맞추기
         df = df.rename(columns={
             "customerID": "customer_id",
             "Email": "email"
         })
+
 
         # ---------------------------
         # 7. Supabase DB 저장 (전체 고객 → predictions 테이블)
