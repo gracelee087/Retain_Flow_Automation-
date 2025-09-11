@@ -178,65 +178,62 @@ with tab2:
 with tab3:
 
 
+    # ---------------------------
+    # Methodology & Technology Stack
+    # ---------------------------
+    st.header("-Methodology and Technology Stack Used")
+
+    st.subheader("1. Methodology")
+    st.markdown("""
+    **1) Customer Churn Prediction**  
+    - Data preprocessing: missing value imputation, numeric conversion, one-hot encoding  
+    - Handling class imbalance: **SMOTE oversampling**  
+    - Model: **RandomForestClassifier + CalibratedClassifierCV** for probability calibration  
+    - Customer segmentation: **KMeans clustering (4 groups based on churn probability and Monthly Charges)**  
+
+    **2) Revenue / Total Charges Prediction**  
+    - Baseline model + Residual model (**Residual Learning**)  
+    - Residual **RandomForestRegressor** to correct baseline prediction errors  
+    """)
+
+    st.subheader("Technology Stack")
+    st.markdown("""
+    - **Python 3.10+**  
+    - **Libraries**: pandas, numpy, scikit-learn, imbalanced-learn, seaborn, matplotlib, cloudpickle  
+    - **Deployment / Visualization**: Streamlit  
+    - **Environment**: Jupyter Notebook, Virtual Environment (venv)  
+    """)
 
 
-    st.header("Churn Methodology and Technology Stack Used")
+    # ---------------------------
+    # Modelling
+    # ---------------------------
+    st.header("2.Modelling")
 
-    methodology_data = [
-        ["Problem Definition", 
-         "Predict customer churn in advance and identify high-value customers → design targeted retention strategies"],
-        ["Data Preparation", 
-         "- Source: customer_Info copy.csv\n- Convert TotalCharges to numeric & handle missing values\n- Transform Churn: Yes/No → 1/0"],
-        ["Preprocessing Strategy", 
-         "- Numerical: tenure, MonthlyCharges, TotalCharges\n- Categorical: Contract type, Payment method, etc. → OneHotEncoding\n- Numeric cleaning with FunctionTransformer"],
-        ["Imbalance Handling", 
-         "SMOTE: oversampling of minority class (churned customers)"],
-        ["Process", 
-         "Model training → Hyperparameter tuning → Probability calibration → Customer segmentation"],
-        ["Technology Stack", 
-         "- Python (pandas, numpy, scikit-learn, imbalanced-learn, seaborn, matplotlib)\n"
-         "- Modeling: Pipeline, OneHotEncoder, ColumnTransformer, FunctionTransformer\n"
-         "- Model: RandomForestClassifier + CalibratedClassifierCV\n"
-         "- Optimization: GridSearchCV + StratifiedKFold (scoring=recall)\n"
-         "- Imbalance: SMOTE\n"
-         "- Clustering: KMeans + StandardScaler\n"
-         "- Deployment: cloudpickle (model + scaler + clusterer bundle)"]
-    ]
-    methodology_df = pd.DataFrame(methodology_data, columns=["Section", "Details"])
-    st.table(methodology_df)   # ✅ 자동 줄바꿈 표
+    st.subheader("1) Customer Churn Prediction Model")
+    st.markdown("""
+    - **Problem Type**: Classification  
+    - **Model Used**: RandomForestClassifier + CalibratedClassifierCV + KMeans  
+    - **Output**: Churn probability (0–1)  
+    - **Evaluation Metrics**: Accuracy, Recall, Precision, F1, ROC-AUC  
+    - **Calibration**: Sigmoid-based probability calibration  
+    - **Loss Function / Activation Function**:  
+        - Loss: None explicitly (tree-based split criteria = Gini / Cross-Entropy)  
+        - Activation: None (Sigmoid in CalibratedClassifierCV for probability conversion)  
+    - **Notes**: KMeans segmentation identifies 4 customer groups for additional insights  
+    """)
 
-    st.header("Modelling")
-
-    modelling_data = [
-        ["Base Model", "RandomForestClassifier (class_weight='balanced')"],
-        ["Hyperparameter Tuning", 
-         "GridSearchCV (n_estimators, max_depth, min_samples_split, max_features)\n"
-         "5-Fold Stratified CV, optimized for Recall"],
-        ["Why Recall", 
-         "Missing churners is more costly for the business than false positives"],
-        ["Performance Improvements", 
-         "- CalibratedClassifierCV: probability calibration (sigmoid)\n"
-         "- Threshold adjustment: 0.5 vs 0.3 → improves Recall\n"
-         "- ROC Curve: AUC ≈ 0.85"],
-        ["Feature Importance", 
-         "- Top features: MonthlyCharges, tenure, Contract, InternetService, OnlineSecurity …\n"
-         "- Insights:\n"
-         "  • High MonthlyCharges + short tenure → higher churn risk\n"
-         "  • Missing add-ons (TechSupport, OnlineSecurity) → higher churn risk"],
-        ["Segmentation (KMeans)", 
-         "- Input: Predicted churn probability + MonthlyCharges\n"
-         "- Result: 4 clusters\n"
-         "  • Cluster 2: High Risk & High Value (priority customers)\n"
-         "  • Cluster 0/1: Low Risk groups\n"
-         "- Use case: targeted marketing strategies per segment"]
-    ]
-    modelling_df = pd.DataFrame(modelling_data, columns=["Section", "Details"])
-    st.table(modelling_df)   # ✅ 자동 줄바꿈 표
-
-
-
-
-
+    st.subheader("2) Revenue / Total Charges Prediction Model")
+    st.markdown("""
+    - **Problem Type**: Regression  
+    - **Model Used**: Baseline model + RandomForest residual model  
+    - **Output**: Continuous value (Total Charges)  
+    - **Evaluation Metrics**: RMSE, R²  
+    - **Loss Function / Activation Function**:  
+        - Loss: MSE (variance minimization in RandomForest regressor)  
+        - Activation: None  
+    - **Notes**: Residual learning corrects baseline model errors to improve prediction accuracy  
+    """)
 
 
 
@@ -245,20 +242,7 @@ with tab3:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-    st.header("Modeling/Evaluation")
-    
-    st.header("Churn Prediction Model Performance Evaluation")
+    st.header("-Churn Prediction Model Performance Evaluation")
 
     modeling_path = "notebook/notebook/modeling_insight"
 
@@ -291,59 +275,12 @@ with tab3:
     # ---------------------------
     # Churn 모델과 Revenue 모델 구분선
     # ---------------------------
-    st.header("Revenue Model - Methodology and Technology Stack Used")
-
-    revenue_methodology_data = [
-        ["Problem Definition", 
-         "Predict customer lifetime revenue (TotalCharges) more accurately by combining baseline trends with advanced modeling"],
-        ["Data Preparation", 
-         "- Source: customer_Info copy.csv\n- Drop customerID\n- Convert TotalCharges to numeric & fill missing values"],
-        ["Preprocessing Strategy", 
-         "- Baseline: tenure, MonthlyCharges → Linear Regression\n- Residual: categorical features (Contract, PaymentMethod, InternetService, add-ons like TechSupport, OnlineSecurity) → OneHotEncoding"],
-        ["Residual Concept", 
-         "Residual = Actual TotalCharges – Baseline prediction\nRandomForestRegressor predicts these residuals"],
-        ["Process", 
-         "1. Baseline model (Linear Regression)\n2. Compute residuals\n3. Train RandomForestRegressor on residuals\n4. Final prediction = Baseline + Residual model"],
-        ["Technology Stack", 
-         "- Python (pandas, numpy, scikit-learn, seaborn, matplotlib)\n"
-         "- Models: LinearRegression + RandomForestRegressor\n"
-         "- Pipeline + ColumnTransformer + OneHotEncoder\n"
-         "- Metrics: R², RMSE\n"
-         "- Visualization: scatter plots, residual histograms, feature importances"]
-    ]
-    revenue_methodology_df = pd.DataFrame(revenue_methodology_data, columns=["Section", "Details"])
-    st.table(revenue_methodology_df)
-
-    st.header("Revenue Model - Modelling")
-
-    revenue_modelling_data = [
-        ["Baseline Model", "Linear Regression with tenure × MonthlyCharges"],
-        ["Baseline Performance", "R² ≈ 0.89 → explains ~89% of revenue variance"],
-        ["Residual Modeling", "RandomForestRegressor trained on categorical features (Contract, PaymentMethod, TechSupport, etc.)"],
-        ["Residual Performance", "R² ≈ 0.55 → explains ~55% of variance in residuals"],
-        ["Final Model", "Final prediction = Baseline + Residual model"],
-        ["Final Performance", "R² ≈ 0.965, RMSE ≈ 424\nAverage revenue ≈ 2280 → error ≈ 18.6%"],
-        ["Feature Importance (Residual Model)", "Key drivers: Contract type, InternetService, PaymentMethod, TechSupport, OnlineSecurity"],
-        ["Visualization", "- Baseline vs Actual (scatter)\n- Residual distribution (histogram)\n- Residual Feature Importances (barplot)\n- Final Actual vs Predicted (scatter)\n- Final Residuals (histogram)"]
-    ]
-    revenue_modelling_df = pd.DataFrame(revenue_modelling_data, columns=["Section", "Details"])
-    st.table(revenue_modelling_df)
-
-
-
-
-
-
-
-
-
-
-
+    
 
     st.divider()  # 최신 Streamlit
     # st.markdown("---")  # 혹은 이 방식도 가능
 
-    st.header("Revenue Prediction Model Performance Evaluation")
+    st.header("-Revenue Prediction Model Performance Evaluation")
 
     revenue_path = "notebook/revenue_insight"
 
@@ -607,14 +544,6 @@ with tab5:
 - Enable **1 person to deliver the productivity of 10** through intelligent automation.  
 - Move toward a future where **data-driven decision-making** is seamlessly embedded in daily operations.  
     """)
-
-    st.markdown(
-        """
-        <sub>Note: This project is a first step toward scaling intelligent automation across business functions.</sub>
-        """,
-        unsafe_allow_html=True
-    )
-
 
 
 
