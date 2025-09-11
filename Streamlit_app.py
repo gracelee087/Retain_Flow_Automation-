@@ -7,6 +7,22 @@ import numpy as np
 import streamlit as st
 import os
 
+from sqlalchemy import create_engine
+
+# Supabase DB 접속 문자열 (비밀번호는 실제 값으로 교체!)
+DATABASE_URL = "postgresql+psycopg2://postgres:<비밀번호>@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres?sslmode=require"
+
+try:
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        result = conn.execute("SELECT version();")
+        for row in result:
+            print("✅ 연결 성공:", row[0])
+except Exception as e:
+    print("❌ 연결 실패:", e)
+
+
+    
 st.title("RetainFlow Automation: Customer Churn Prediction")
 
 
@@ -386,10 +402,7 @@ with tab4:
     # ---------------------------
     # 2. Postgres DB 연결
     # ---------------------------
-    engine = create_engine(
-        "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres"
-    )
-
+    engine = create_engine( "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres" )
 
     # ---------------------------
     # 4. Streamlit UI
