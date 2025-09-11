@@ -419,7 +419,7 @@ with tab4:
         st.info("💡 모델 파일이 올바른 위치에 있는지 확인해주세요.")
         st.stop()
     else:
-        st.success("✅ 모델 로드 성공")
+        st.success("✅ Model loaded successfully")
 
     # ---------------------------
     # 2. Postgres DB 연결
@@ -435,7 +435,7 @@ with tab4:
         # 연결 테스트
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        st.success("✅ Supabase DB 연결 성공")
+        st.success("✅ Supabase DB connected successfully")
         db_connected = True
     except Exception as e:
         st.warning(f"⚠️ Supabase DB 연결 실패: {e}")
