@@ -110,7 +110,6 @@ with tab2:
     - Includes customer contracts, payment methods, service usage, billing history, and churn labels  
 
     **Data collection**  
-    - Mainly gathered from **Customer Relationship Management (CRM)** and **Billing systems**  
     - Key feature categories:  
     - **Customer info**: tenure, SeniorCitizen  
     - **Contract info**: Contract, PaymentMethod, InternetService  
@@ -212,8 +211,8 @@ with tab3:
     # ---------------------------
     st.header("2.Modelling")
 
-    st.subheader("1) Customer Churn Prediction Model")
     st.markdown("""
+    **1) Customer Churn Prediction Model** 
     - **Problem Type**: Classification  
     - **Model Used**: RandomForestClassifier + CalibratedClassifierCV + KMeans  
     - **Output**: Churn probability (0–1)  
@@ -225,8 +224,8 @@ with tab3:
     - **Notes**: KMeans segmentation identifies 4 customer groups for additional insights  
     """)
 
-    st.subheader("2) Revenue / Total Charges Prediction Model")
     st.markdown("""
+    **2) Revenue / Total Charges Prediction Model** 
     - **Problem Type**: Regression  
     - **Model Used**: Baseline model + RandomForest residual model  
     - **Output**: Continuous value (Total Charges)  
@@ -293,8 +292,8 @@ with tab3:
     revenue_path = "notebook/revenue_insight"
 
     st.markdown("### Baseline Revenue Model (Linear Regression)")
-    st.write("- R² ≈ 0.89 (89%)")
-    st.write("- R² ≈ 0.55 (55%) → Indicates that some complex patterns are not explained by the baseline model")
+    st.write("- Baseline R²: 0.8902 (≈ 0.89), TotalCharges")
+    st.write("- Residual R²: 0.5444 (≈ 0.55)) → Indicates that some complex patterns are not explained by the baseline model")
 
     st.markdown("### Residual Model (RandomForestRegressor)")
     st.write("- Target: Residuals")
