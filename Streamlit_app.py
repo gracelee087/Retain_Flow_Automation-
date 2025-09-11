@@ -4,22 +4,19 @@ import pickle
 from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.dialects.postgresql import insert
 import numpy as np
-import streamlit as st
 import os
 
-from sqlalchemy import create_engine
-
-# Supabase DB 접속 문자열 (비밀번호는 실제 값으로 교체!)
-DATABASE_URL = "postgresql+psycopg2://postgres:<비밀번호>@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres?sslmode=require"
+# Supabase DB 접속 문자열 - 환경변수 사용
+DATABASE_URL = st.secrets["DATABASE_URL"]
 
 try:
     engine = create_engine(DATABASE_URL)
     with engine.connect() as conn:
-        result = conn.execute("SELECT version();")
+        result = conn.execute(text("SELECT version();"))
         for row in result:
-            print("✅ 연결 성공:", row[0])
+            st.success(f"✅ DB 연결 성공: {row[0]}")
 except Exception as e:
-    print("❌ 연결 실패:", e)
+    st.error(f"❌ DB 연결 실패: {e}")
 
 
     
@@ -169,7 +166,7 @@ with tab2:
 
 
 
-    eda_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\eda_insight"
+    eda_path = "notebook/notebook/eda_insight"
 
     if os.path.exists(eda_path):
         img_files = [f for f in os.listdir(eda_path) if f.endswith((".png", ".jpg", ".jpeg"))]
@@ -273,7 +270,7 @@ with tab3:
     
     st.header("Churn Prediction Model Performance Evaluation")
 
-    modeling_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\notebook\modeling_insight"
+    modeling_path = "notebook/notebook/modeling_insight"
 
     if os.path.exists(modeling_path):
         img_files = [f for f in os.listdir(modeling_path) if f.endswith((".png", ".jpg", ".jpeg"))]
@@ -358,7 +355,7 @@ with tab3:
 
     st.header("Revenue Prediction Model Performance Evaluation")
 
-    revenue_path = r"C:\Users\honor\spicedAcademy\Capstone_Final_Project\Retain_Flow_Automation-\notebook\revenue_insight"
+    revenue_path = "notebook/revenue_insight"
 
     if os.path.exists(revenue_path):
         img_files = [f for f in os.listdir(revenue_path) if f.endswith(".png")]
@@ -386,23 +383,41 @@ with tab4:
     # ---------------------------
     # 1. 모델 로드
     # ---------------------------
-    with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
-        bundle = pickle.load(f)
+    try:
+        with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
+            bundle = pickle.load(f)
 
-    model = bundle["model"]
-    scaler = bundle["scaler"]
-    kmeans = bundle["kmeans"]
+        model = bundle["model"]
+        scaler = bundle["scaler"]
+        kmeans = bundle["kmeans"]
 
-    with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
-        revenue_bundle = pickle.load(f)
+        with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
+            revenue_bundle = pickle.load(f)
 
-    base_model = revenue_bundle["baseline_model"]
-    residual_model = revenue_bundle["residual_model"]
+        base_model = revenue_bundle["baseline_model"]
+        residual_model = revenue_bundle["residual_model"]
+        
+        st.success("✅ 모델 로드 성공")
+        
+    except FileNotFoundError as e:
+        st.error(f"❌ 모델 파일을 찾을 수 없습니다: {e}")
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ 모델 로드 실패: {e}")
+        st.stop()
 
     # ---------------------------
     # 2. Postgres DB 연결
     # ---------------------------
-    engine = create_engine( "postgresql://postgres:Nwk5JYywxV3ATT8M@db.fjaxvaegmtbsyogavuzy.supabase.co:5432/postgres" )
+    try:
+        engine = create_engine(st.secrets["DATABASE_URL"])
+        # 연결 테스트
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        st.success("✅ Supabase DB 연결 성공")
+    except Exception as e:
+        st.error(f"❌ Supabase DB 연결 실패: {e}")
+        st.stop()
 
     # ---------------------------
     # 4. Streamlit UI
