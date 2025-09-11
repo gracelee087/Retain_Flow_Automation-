@@ -7,16 +7,7 @@ import numpy as np
 import os
 
 # Supabase DB 접속 문자열 - 환경변수 사용
-DATABASE_URL = st.secrets["DATABASE_URL"]
-
-try:
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT version();"))
-        for row in result:
-            st.success(f"✅ DB 연결 성공: {row[0]}")
-except Exception as e:
-    st.error(f"❌ DB 연결 실패: {e}")
+# 앱 시작 시에는 DB 연결을 테스트하지 않음 (Application 탭에서만 연결)
 
 
     
@@ -401,6 +392,7 @@ with tab4:
         
     except FileNotFoundError as e:
         st.error(f"❌ 모델 파일을 찾을 수 없습니다: {e}")
+        st.info("💡 모델 파일이 올바른 위치에 있는지 확인해주세요.")
         st.stop()
     except Exception as e:
         st.error(f"❌ 모델 로드 실패: {e}")
@@ -415,9 +407,11 @@ with tab4:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         st.success("✅ Supabase DB 연결 성공")
+        db_connected = True
     except Exception as e:
-        st.error(f"❌ Supabase DB 연결 실패: {e}")
-        st.stop()
+        st.warning(f"⚠️ Supabase DB 연결 실패: {e}")
+        st.info("💡 DB 연결 없이도 예측 기능을 사용할 수 있습니다.")
+        db_connected = False
 
     # ---------------------------
     # 4. Streamlit UI
@@ -481,61 +475,71 @@ with tab4:
 
 
         # ---------------------------
-        # 7. Supabase DB 저장 (전체 고객 → predictions 테이블)
+        # 7. Supabase DB 저장 (DB 연결된 경우에만)
         # ---------------------------
-        metadata = MetaData()
-        metadata.reflect(bind=engine)
-        predictions_table = metadata.tables["predictions"]
+        if db_connected:
+            try:
+                metadata = MetaData()
+                metadata.reflect(bind=engine)
+                predictions_table = metadata.tables["predictions"]
 
-        with engine.begin() as conn:
-            for _, row in df.iterrows():
-                stmt = insert(predictions_table).values(
-                    customer_id=row["customer_id"],
-                    email=row["email"],
-                    churn_prob=row["churn_prob"],
-                    cluster_label=row["cluster_label"],
-                    base_message=row["base_message"],
-                    predicted_revenue=row["predicted_revenue"],
-                    revenue_12m=row["revenue_12m"],
-                    expected_loss_12m=row["expected_loss_12m"]
-                )
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["customer_id"],
-                    set_={
-                        "email": row["email"],
-                        "churn_prob": row["churn_prob"],
-                        "cluster_label": row["cluster_label"],
-                        "base_message": row["base_message"],
-                        "predicted_revenue": row["predicted_revenue"],
-                        "revenue_12m": row["revenue_12m"],
-                        "expected_loss_12m": row["expected_loss_12m"]
-                    }
-                )
-                conn.execute(stmt)
+                with engine.begin() as conn:
+                    for _, row in df.iterrows():
+                        stmt = insert(predictions_table).values(
+                            customer_id=row["customer_id"],
+                            email=row["email"],
+                            churn_prob=row["churn_prob"],
+                            cluster_label=row["cluster_label"],
+                            base_message=row["base_message"],
+                            predicted_revenue=row["predicted_revenue"],
+                            revenue_12m=row["revenue_12m"],
+                            expected_loss_12m=row["expected_loss_12m"]
+                        )
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=["customer_id"],
+                            set_={
+                                "email": row["email"],
+                                "churn_prob": row["churn_prob"],
+                                "cluster_label": row["cluster_label"],
+                                "base_message": row["base_message"],
+                                "predicted_revenue": row["predicted_revenue"],
+                                "revenue_12m": row["revenue_12m"],
+                                "expected_loss_12m": row["expected_loss_12m"]
+                            }
+                        )
+                        conn.execute(stmt)
 
-        # ---------------------------
-        # 8. Top 10 고객 저장 (→ top_risk_customers 테이블)
-        # ---------------------------
-        top10 = df.sort_values("expected_loss_12m", ascending=False).head(10)
+                # ---------------------------
+                # 8. Top 10 고객 저장 (→ top_risk_customers 테이블)
+                # ---------------------------
+                top10 = df.sort_values("expected_loss_12m", ascending=False).head(10)
 
-        top_table = metadata.tables["top_risk_customers"]
+                top_table = metadata.tables["top_risk_customers"]
 
-        with engine.begin() as conn:
-            # 기존 데이터 지우고 새로 저장 (덮어쓰기 방식)
-            conn.execute(text("TRUNCATE TABLE top_risk_customers;"))
+                with engine.begin() as conn:
+                    # 기존 데이터 지우고 새로 저장 (덮어쓰기 방식)
+                    conn.execute(text("TRUNCATE TABLE top_risk_customers;"))
 
-            for _, row in top10.iterrows():
-                stmt = insert(top_table).values(
-                    customer_id=row["customer_id"],
-                    email=row["email"],
-                    churn_prob=row["churn_prob"],
-                    cluster_label=row["cluster_label"],
-                    base_message=row["base_message"],
-                    predicted_revenue=row["predicted_revenue"],
-                    revenue_12m=row["revenue_12m"],
-                    expected_loss_12m=row["expected_loss_12m"]
-                )
-                conn.execute(stmt)
+                    for _, row in top10.iterrows():
+                        stmt = insert(top_table).values(
+                            customer_id=row["customer_id"],
+                            email=row["email"],
+                            churn_prob=row["churn_prob"],
+                            cluster_label=row["cluster_label"],
+                            base_message=row["base_message"],
+                            predicted_revenue=row["predicted_revenue"],
+                            revenue_12m=row["revenue_12m"],
+                            expected_loss_12m=row["expected_loss_12m"]
+                        )
+                        conn.execute(stmt)
+                        
+                st.success("✅ Supabase DB 업데이트 완료! (전체 predictions + Top 10 저장)")
+                
+            except Exception as e:
+                st.error(f"❌ DB 저장 실패: {e}")
+                st.info("💡 예측 결과는 표시되지만 DB에 저장되지 않았습니다.")
+        else:
+            st.info("ℹ️ DB 연결이 없어 데이터가 저장되지 않았습니다.")
 
         # ---------------------------
         # 9. Streamlit 출력
@@ -548,8 +552,6 @@ with tab4:
 
         st.subheader("Top 10 Revenue at Risk 고객 (12M 기준)")
         st.dataframe(top10)
-
-        st.success("✅ Supabase DB 업데이트 완료! (전체 predictions + Top 10 저장)")
 
 
 

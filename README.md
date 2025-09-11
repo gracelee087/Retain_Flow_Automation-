@@ -60,7 +60,23 @@ pip install -r requirements.txt
 streamlit run Streamlit_app.py
 ```
 
+## 문제 해결
+
+### 1. 모델 파일이 없다는 오류
+- 모델 파일(`pipeline_customer_churn_model.pkl`, `pipeline_customer_revenue_model.pkl`)이 `notebook/` 디렉토리에 있는지 확인
+- GitHub에 모든 파일이 업로드되었는지 확인
+
+### 2. Supabase 연결 실패
+- Streamlit Cloud의 Secrets Management에서 올바른 DATABASE_URL 설정
+- Supabase 프로젝트가 활성화되어 있는지 확인
+- 방화벽 설정 확인
+
+### 3. psycopg2-binary 설치 실패
+- requirements.txt에서 psycopg2-binary 버전을 2.9.10 이상으로 설정
+- Streamlit Cloud가 자동으로 호환되는 버전을 설치
+
 ## 주의사항
 - Supabase 데이터베이스 연결 정보는 환경변수로 관리
 - 모델 파일과 이미지 파일은 상대 경로로 참조
 - Streamlit Cloud에서는 절대 경로 사용 불가
+- DB 연결이 실패해도 예측 기능은 정상 작동
