@@ -119,7 +119,6 @@ with tab2:
     - Churn is defined as whether a customer discontinued the service within a given period  
 
     **Challenges**  
-    - **Data quality issues**: missing or invalid `TotalCharges` values → preprocessing required  
     - **Class imbalance**: majority of customers are `Churn=No`, while `Churn=Yes` is a minority → risk of biased models  
     - **Categorical features**: contract, payment method, and service usage require encoding for ML models  
     - **Limitations in realism**:  
@@ -138,7 +137,8 @@ with tab2:
 
     **Billing Metrics**  
     - Higher MonthlyCharges are associated with higher churn  
-    - In contrast, TotalCharges show a negative correlation with churn, reflecting stronger customer loyalty  
+    - In contrast, TotalCharges show a negative correlation with churn, reflecting stronger customer loyalty 
+      (총 요금(누적 지출액)이 높을수록 이탈 확률은 줄어든다는 뜻) 
 
     **Contract & Service Features**  
     - Month-to-month contracts have the highest churn rate  
@@ -190,6 +190,8 @@ with tab3:
     - Handling class imbalance: **SMOTE oversampling**  
     - Model: **RandomForestClassifier + CalibratedClassifierCV** for probability calibration  
     - Customer segmentation: **KMeans clustering (4 groups based on churn probability and Monthly Charges)**  
+        ChurnProbability(High risk/Low risk), 
+        MonthlyCharges(high value/low value)
 
     **2) Revenue / Total Charges Prediction**  
     - Baseline model + Residual model (**Residual Learning**)  
@@ -246,6 +248,12 @@ with tab3:
 
     modeling_path = "notebook/notebook/modeling_insight"
 
+    st.markdown("""
+    - Before calibration, the model achieved Recall = 0.614, ROC AUC = 0.834.
+    - After calibration, the results were Recall = 0.529, ROC AUC = 0.835. 
+        """)
+
+
     if os.path.exists(modeling_path):
         img_files = [f for f in os.listdir(modeling_path) if f.endswith((".png", ".jpg", ".jpeg"))]
 
@@ -283,6 +291,17 @@ with tab3:
     st.header("-Revenue Prediction Model Performance Evaluation")
 
     revenue_path = "notebook/revenue_insight"
+
+    st.markdown("### Baseline Revenue Model (Linear Regression)")
+    st.write("- R² ≈ 0.89 (89%)")
+    st.write("- R² ≈ 0.55 (55%) → Indicates that some complex patterns are not explained by the baseline model")
+
+    st.markdown("### Residual Model (RandomForestRegressor)")
+    st.write("- Target: Residuals")
+
+    st.markdown("### Combined Model (Baseline + Residual)")
+    st.write("- Final R² ≈ 0.965 (96.5%)")
+    st.write("- Final RMSE ≈ 423.9 (18%)")
 
     if os.path.exists(revenue_path):
         img_files = [f for f in os.listdir(revenue_path) if f.endswith(".png")]
