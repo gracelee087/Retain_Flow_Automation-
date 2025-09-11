@@ -574,13 +574,13 @@ with tab4:
         # ---------------------------
         # 9. Streamlit 출력
         # ---------------------------
-        st.subheader("예측 및 세그먼트 결과")
+        st.subheader("Prediction and segmentation results")
         st.dataframe(df[["customer_id", "email", "churn_prob",
                         "cluster_label", "base_message",
                         "predicted_revenue",
                         "revenue_12m", "expected_loss_12m"]])
 
-        st.subheader("Top 10 Revenue at Risk 고객 (12M 기준)")
+        st.subheader("Top 10 Revenue at Risk Customers (12-Month Basis)")
         st.dataframe(top10)
 
 
