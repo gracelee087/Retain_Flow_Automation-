@@ -166,8 +166,7 @@ with tab2:
             for img in img_files:
                 st.image(
                     os.path.join(eda_path, img),
-                    caption=img,
-                    use_container_width=True  # ✅ 변경됨
+                    caption=img
                 )
         else:
             st.warning("⚠️ EDA 이미지 파일이 없습니다.")
@@ -372,37 +371,67 @@ with tab4:
     st.header("Customer Churn + Revenue Forecasting (Supabase Integration)")
 
     # ---------------------------
-    # 1. 모델 로드
+    # 1. 모델 로드 (사용자가 탭을 클릭했을 때만)
     # ---------------------------
-    try:
-        with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
-            bundle = pickle.load(f)
+    @st.cache_resource
+    def load_models():
+        try:
+            import warnings
+            import sys
+            warnings.filterwarnings("ignore")
+            
+            # scikit-learn 호환성 문제를 우회하기 위한 패치
+            try:
+                from sklearn.utils._tags import _safe_tags
+            except ImportError:
+                # _safe_tags가 없는 경우 더미 함수 생성
+                def _safe_tags(estimator, key, tag_val=None):
+                    return getattr(estimator, '_more_tags', lambda: {}).get(key, tag_val)
+                
+                import sklearn.utils._tags
+                sklearn.utils._tags._safe_tags = _safe_tags
+            
+            with open("notebook/pipeline_customer_churn_model.pkl", "rb") as f:
+                bundle = pickle.load(f)
 
-        model = bundle["model"]
-        scaler = bundle["scaler"]
-        kmeans = bundle["kmeans"]
+            model = bundle["model"]
+            scaler = bundle["scaler"]
+            kmeans = bundle["kmeans"]
 
-        with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
-            revenue_bundle = pickle.load(f)
+            with open("notebook/pipeline_customer_revenue_model.pkl", "rb") as f:
+                revenue_bundle = pickle.load(f)
 
-        base_model = revenue_bundle["baseline_model"]
-        residual_model = revenue_bundle["residual_model"]
-        
-        st.success("✅ 모델 로드 성공")
-        
-    except FileNotFoundError as e:
-        st.error(f"❌ 모델 파일을 찾을 수 없습니다: {e}")
+            base_model = revenue_bundle["baseline_model"]
+            residual_model = revenue_bundle["residual_model"]
+            
+            return model, scaler, kmeans, base_model, residual_model, None
+            
+        except FileNotFoundError as e:
+            return None, None, None, None, None, f"❌ 모델 파일을 찾을 수 없습니다: {e}"
+        except Exception as e:
+            return None, None, None, None, None, f"❌ 모델 로드 실패: {e}"
+
+    # 모델 로드 시도
+    model, scaler, kmeans, base_model, residual_model, error = load_models()
+    
+    if error:
+        st.error(error)
         st.info("💡 모델 파일이 올바른 위치에 있는지 확인해주세요.")
         st.stop()
-    except Exception as e:
-        st.error(f"❌ 모델 로드 실패: {e}")
-        st.stop()
+    else:
+        st.success("✅ 모델 로드 성공")
 
     # ---------------------------
     # 2. Postgres DB 연결
     # ---------------------------
     try:
-        engine = create_engine(st.secrets["DATABASE_URL"])
+        # DATABASE_URL을 올바르게 가져오기
+        if isinstance(st.secrets["DATABASE_URL"], dict):
+            database_url = st.secrets["DATABASE_URL"]["DATABASE_URL"]
+        else:
+            database_url = st.secrets["DATABASE_URL"]
+            
+        engine = create_engine(database_url)
         # 연결 테스트
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -411,6 +440,7 @@ with tab4:
     except Exception as e:
         st.warning(f"⚠️ Supabase DB 연결 실패: {e}")
         st.info("💡 DB 연결 없이도 예측 기능을 사용할 수 있습니다.")
+        st.info("💡 Streamlit Cloud의 Secrets Management에서 DATABASE_URL을 설정하세요.")
         db_connected = False
 
     # ---------------------------
